@@ -1,0 +1,103 @@
+import matplotlib.pyplot as plt
+import os
+from datetime import datetime
+
+# Daftar pemain
+players = [
+    'IMAN CAHYA MUSTAKIM',
+    'ASEP SOPIAN',
+    'IBNU NUGRAHA',
+    'LUKMAN HAKIM'
+]
+
+def baca_data(nama_file="data_lari_bleep.txt"):
+    """Baca data langsung dari file Notepad"""
+    stats = {player: {'Lari': [], 'Bleep': [], 'Tanggal': []} for player in players}
+    
+    try:
+        with open(nama_file, 'r', encoding='utf-8') as f:
+            for line in f:
+                parts = line.strip().split(',')
+                if len(parts) == 4:
+                    tanggal, nama, lari, bleep = parts
+                    if nama in players:
+                        stats[nama]['Lari'].append(float(lari))
+                        stats[nama]['Bleep'].append(int(bleep))
+                        stats[nama]['Tanggal'].append(tanggal)
+    except FileNotFoundError:
+        print("❌ File 'data_lari_bleep.txt' tidak ditemukan")
+        print("Pastikan formatnya:")
+        print("YYYY-MM-DD,NAMA_PEMAIN,WAKTU_LARI,LEVEL_BLEEP")
+    return stats
+
+def buat_laporan(stats):
+    """Buat laporan statistik"""
+    with open("statistik_lari_bleep.txt", 'w', encoding='utf-8') as f:
+        f.write("LAPORAN STATISTIK PEMAIN\n")
+        f.write("="*60 + "\n")
+        f.write(f"{'PEMAIN':<25}{'% LARI':<10}{'% BLEEP':<10}{'TERBAIK':<15}\n")
+        f.write("-"*60 + "\n")
+        
+        for player in players:
+            data = stats[player]
+            if not data['Lari']:
+                continue
+                
+            # Hitung persentase
+            lari_baik = sum(1 for t in data['Lari'] if t <= 10)
+            bleep_baik = sum(1 for l in data['Bleep'] if l >= 50)
+            total = len(data['Lari'])
+            
+            f.write(f"{player:<25}"
+                   f"{(lari_baik/total)*100:<10.1f}%"
+                   f"{(bleep_baik/total)*100:<10.1f}%"
+                   f"{min(data['Lari']):.1f} menit | {max(data['Bleep'])} level\n")
+    
+    print("✅ Laporan disimpan di 'statistik_lari_bleep.txt'")
+
+def buat_grafik(stats):
+    """Buat grafik perkembangan"""
+    os.makedirs("grafik", exist_ok=True)
+    
+    for player in players:
+        data = stats[player]
+        if not data['Lari']:
+            continue
+            
+        plt.figure(figsize=(10, 5))
+        
+        # Plot data
+        plt.plot(data['Tanggal'], data['Lari'], 'b-o', label='Waktu Lari (menit)')
+        plt.plot(data['Tanggal'], data['Bleep'], 'g-s', label='Level Bleep Test')
+        
+        # Garis target
+        plt.axhline(y=10, color='b', linestyle='--', alpha=0.5, label='Target Lari (10 menit)')
+        plt.axhline(y=50, color='g', linestyle='--', alpha=0.5, label='Target Bleep (50)')
+        
+        plt.title(f"Perkembangan {player}")
+        plt.xticks(rotation=45)
+        plt.legend()
+        plt.grid(True)
+        
+        # Simpan grafik
+        nama_file = f"grafik/{player.replace(' ', '_')}.png"
+        plt.savefig(nama_file, bbox_inches='tight', dpi=100)
+        plt.close()
+    
+    print("✅ Grafik disimpan di folder 'grafik'")
+
+if __name__ == "__main__":
+    print("PROGRAM STATISTIK LARI & BLEEP TEST")
+    print("Membaca data dari 'data_lari_bleep.txt'...")
+    
+    # 1. Baca data
+    stats = baca_data()
+    
+    # 2. Buat laporan
+    buat_laporan(stats)
+    
+    # 3. Buat grafik
+    buat_grafik(stats)
+    
+    print("\n🎯 Target:")
+    print("- Lari: ≤10 menit\n- Bleep Test: ≥50 level")
