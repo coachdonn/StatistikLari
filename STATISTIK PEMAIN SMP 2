@@ -1,0 +1,102 @@
+import matplotlib.pyplot as plt
+import os
+from datetime import datetime, timedelta
+
+players = [
+    'SATRIA', 'FITRA', 'VANO', 'REVAN', 'RADIS', 'WILI', 
+    'YASYFI', 'ZAKKI', 'RAMA', 'AGNI', 'SITI AMINAH', 
+    'SITI NURHASANAH', 'NOVI', 'ZAHRA', 'MALKA', 
+    'MIRNA', 'HANI', 'EVITA', 'AYU'
+]
+
+def calculate_percentage(player, data):
+    """Calculate skill percentages from real data"""
+    lari = (float(data[2]) / 5) * 100 if float(data[2]) > 0 else 0
+    layup = (float(data[3]) / 10) * 100 if float(data[3]) > 0 else 0
+    under_ring = (float(data[4]) / 20) * 100 if float(data[4]) > 0 else 0
+    
+    try:
+        passing = (float(data[5]) + float(data[6]) + float(data[7])) / 3 * 10 if float(data[5]) > 0 else 0
+    except:
+        passing = 0
+    
+    shooting = (float(data[8]) / 10) * 100 if float(data[8]) > 0 else 0
+    return lari, layup, under_ring, passing, shooting
+
+def save_to_txt(stats, days, filename="laporan_statistik.txt"):
+    """Save statistics to a text file"""
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write("LAPORAN STATISTIK PEMAIN BASKET\n")
+        f.write("="*50 + "\n\n")
+        
+        for player in players:
+            f.write(f"PEMAIN: {player}\n")
+            f.write(f"{'Tanggal':<12}{'Lari':<8}{'Layup':<8}{'Under Ring':<12}{'Passing':<10}{'Shooting':<10}\n")
+            f.write("-"*50 + "\n")
+            
+            for i, day in enumerate(days):
+                if i < len(stats[player]['Lari']):
+                    f.write(f"{day:<12}"
+                           f"{stats[player]['Lari'][i]:<8.1f}%"
+                           f"{stats[player]['Layup'][i]:<8.1f}%"
+                           f"{stats[player]['Under Ring'][i]:<12.1f}%"
+                           f"{stats[player]['Passing'][i]:<10.1f}%"
+                           f"{stats[player]['Shooting'][i]:<10.1f}%\n")
+                else:
+                    f.write(f"{day:<12}{'-':<8}{'-':<8}{'-':<12}{'-':<10}{'-':<10}\n")
+            f.write("\n" + "="*50 + "\n\n")
+
+def process_real_data(filename):
+    """Process real data and create reports"""
+    days = []
+    stats = {player: {'Lari': [], 'Layup': [], 'Under Ring': [], 'Passing': [], 'Shooting': []} 
+             for player in players}
+    
+    try:
+        with open(filename, 'r', encoding='utf-8') as file:
+            for line in file:
+                data = line.strip().split(',')
+                if len(data) == 9 and data[1].upper() in [p.upper() for p in players]:
+                    date = data[0]
+                    if date not in days:
+                        days.append(date)
+                    
+                    player = next(p for p in players if p.upper() == data[1].upper())
+                    percentages = calculate_percentage(player, data)
+                    for i, skill in enumerate(stats[player].keys()):
+                        stats[player][skill].append(percentages[i])
+        
+        # Save to text file
+        save_to_txt(stats, days)
+        
+        # Generate graphs
+        os.makedirs("grafik", exist_ok=True)
+        for player in players:
+            plt.figure(figsize=(12, 6))
+            for skill, values in stats[player].items():
+                plt.plot(days[:len(values)], values, marker='o', label=skill)
+            plt.title(f"Perkembangan {player}")
+            plt.xlabel("Tanggal Latihan")
+            plt.ylabel("Persentase (%)")
+            plt.legend()
+            plt.grid(True)
+            plt.ylim(0, 100)
+            plt.savefig(f"grafik/real_{player.replace(' ', '_')}.png", bbox_inches='tight', dpi=100)
+            plt.close()
+        
+        print("\n✅ Laporan berhasil dibuat:")
+        print(f"- File teks: laporan_statistik.txt")
+        print(f"- Grafik: folder 'grafik'")
+    
+    except Exception as e:
+        print(f"❌ Error: {e}")
+
+if __name__ == "__main__":
+    filename = "basket_data_rekap.txt"
+    
+    if os.path.exists(filename):
+        process_real_data(filename)
+    else:
+        print("❌ File 'basket_data_rekap.txt' tidak ditemukan.")
+        print("Format file harus:")
+        print("YYYY-MM-DD,NAMA_PEMAIN,MIN_LARI,LAYUP,UNDER_RING,PASS1,PASS2,PASS3,SHOOTING")
